@@ -1,0 +1,31 @@
+#!/bin/bash
+set -eo pipefail
+set -x
+
+exec 3>&1 # make stdout available as fd 3 for the result
+exec 1>&2 # redirect all output to stderr for logging
+
+source /opt/resource/common.sh
+
+# Read inputs
+source=$1
+payload=$(mktemp /tmp/resource-out.XXXXXX)
+cat > "$payload" <&0
+
+# Prepare
+namespace=$(jq -r '.source.namespace // ""' < "$payload")
+error_if_empty namespace
+
+setup_resource "$payload" "$source"
+
+# Parse parameters
+chart_dir=$(jq -r '.params.chart_dir // ""' < "$payload")
+release_name=$(jq -r '.params.release_name // ""' < "$payload")
+error_if_empty chart_dir
+error_if_empty release_name
+
+# Deploy
+chart_dir="${source}/${chart_dir}"
+
+info "Deploying helm release into kubernetes..."
+helm upgrade --install --tiller-namespace="$namespace" $release_name $chart_dir
