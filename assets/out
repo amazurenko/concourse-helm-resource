@@ -25,16 +25,53 @@ error_if_empty namespace
 setup_resource "$payload" "$source"
 
 # Parse parameters
-chart_dir=$(jq -r '.params.chart_dir // ""' < "$payload")
-release_name=$(jq -r '.params.release_name // ""' < "$payload")
-error_if_empty chart_dir
-error_if_empty release_name
+req_params=(
+  "chart_dir"
+  "release_name"
+)
+opt_params=(
+  "dry_run"
+  "recreate_pods"
+  "force"
+)
+
+for param in "${req_params[@]}"; do
+  eval ${param}=$(jq -r '.params.'${param}' // ""' < "$payload")
+  error_if_empty ${param}
+done
 
 # Deploy
 chart="${source}/${chart_dir}"
 
-info "Deploying helm release into kubernetes..."
-helm upgrade --install --tiller-namespace="$namespace" $release_name $chart
+info "Deploying helm release '$release_name' into kubernetes..."
+
+# Set and report optional parameters
+for param in "${opt_params[@]}"; do
+  eval ${param}="$(jq -r '.params.'${param}' // ""' < "$payload")"
+  [ -n "${!param}" ] || continue
+
+  case "$param" in
+    dry_run)
+      helm_args+=(--dry-run)
+      opt_line+="'$param' "
+      ;;
+
+    recreate_pods)
+      helm_args+=(--recreate-pods)
+      opt_line+="'$param' "
+      ;;
+
+    force)
+      helm_args+=(--force)
+      opt_line+="'$param' "
+      ;;
+  esac
+done
+if [ -n "${opt_line:-}" ]; then
+  printf "Using options: %s\n" "$opt_line"
+fi
+
+helm upgrade --install --tiller-namespace="$namespace" ${helm_args[*]:-} $release_name $chart
 
 get_revision "$release_name" || die "Getting revision"
 
