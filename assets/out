@@ -12,6 +12,12 @@ source=$1
 payload=$(mktemp /tmp/resource-out.XXXXXX)
 cat > "$payload" <&0
 
+get_revision() {
+  local release="$1"
+
+  revision="$(helm history "$release" | grep -i "DEPLOYED" | awk '{ print $1 }')"
+}
+
 # Prepare
 namespace=$(jq -r '.source.namespace // ""' < "$payload")
 error_if_empty namespace
@@ -25,7 +31,25 @@ error_if_empty chart_dir
 error_if_empty release_name
 
 # Deploy
-chart_dir="${source}/${chart_dir}"
+chart="${source}/${chart_dir}"
 
 info "Deploying helm release into kubernetes..."
-helm upgrade --install --tiller-namespace="$namespace" $release_name $chart_dir
+helm upgrade --install --tiller-namespace="$namespace" $release_name $chart
+
+get_revision "$release_name" || die "Getting revision"
+
+# Payload
+jq -n \
+--arg revision "$revision" \
+--arg chart_dir "$chart_dir" \
+'{
+  "version": {
+    "revision": $revision
+  },
+  "metadata": [
+    {
+      "name": "chart_dir",
+      "value": $chart_dir
+    }
+  ]
+}' >&3
