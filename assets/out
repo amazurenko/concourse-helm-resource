@@ -32,6 +32,8 @@ opt_params=(
   "dry_run"
   "recreate_pods"
   "force"
+  "wait_until_ready"
+  "timeout"
 )
 
 for param in "${req_params[@]}"; do
@@ -52,19 +54,28 @@ for param in "${opt_params[@]}"; do
   case "$param" in
     dry_run)
       helm_args+=(--dry-run)
-      opt_line+="'$param' "
       ;;
 
     recreate_pods)
       helm_args+=(--recreate-pods)
-      opt_line+="'$param' "
       ;;
 
     force)
       helm_args+=(--force)
-      opt_line+="'$param' "
       ;;
+
+    wait_until_ready)
+      helm_args+=(--wait)
+      ;;
+
+    timeout)
+      helm_args+=(--timeout=${!param})
+      ;;
+
+    *) continue
   esac
+
+  opt_line+="'$param' "
 done
 if [ -n "${opt_line:-}" ]; then
   printf "Using options: %s\n" "$opt_line"
@@ -95,10 +106,5 @@ jq -n \
   "version": {
     "revision": $revision
   },
-  "metadata": [
-    {
-      "name": "chart_dir",
-      "value": $chart_dir
-    }
-  ]
+  "metadata": []
 }' >&3
