@@ -71,6 +71,19 @@ if [ -n "${opt_line:-}" ]; then
   printf "Using options: %s\n" "$opt_line"
 fi
 
+# Override values
+set_values=$(jq -r 'if .params.set_values then true else false end' < "$payload")
+if $set_values; then
+  for key in $(jq -r '.params.set_values | keys[]' < "$payload"); do
+    value=$(jq -r '.params.set_values.'$key' // ""' < "$payload")
+    helm_args+=(--set $key=${value:-''})
+
+    values_line+="'$key' "
+  done
+
+  printf "Values set: %s\n" "$values_line"
+fi
+
 helm upgrade --install --tiller-namespace="$namespace" ${helm_args[*]:-} $release_name $chart
 
 get_revision "$release_name" || die "Getting revision"
