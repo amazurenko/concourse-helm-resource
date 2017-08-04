@@ -17,6 +17,10 @@ Note: Requires [Tiller](https://docs.helm.sh/using_helm/#installing-tiller) inst
 
 * `namespace`: *Required.* Namespace the chart will be installed to.
 
+* `release_name`: *Required.* The name of the release.
+
+  NOTE: Changing this value will create a new release under the new name. The old release won't be deleted.
+
 ## Behaviour
 
 ### `check`: Not implemented
@@ -33,9 +37,14 @@ Deploys the chart using Helm. Every deploy creates a new revision of the same re
 
 * `chart_dir`: *Required.* The path of a directory containing the helm chart.
 
-* `release_name`: *Required.* The name of the release of the helm chart.
+* `set_values`: *Optional*. Override values defined in `values.yaml`.
 
-  NOTE: Changing this value will create a new release under the new name. The old release won't be deleted.
+  Example:
+
+  ```yaml
+  set_values:
+    key1: value1
+  ```
 
 * `dry_run`: *Optional.* Simulate the installation. Default `false`.
 
@@ -66,6 +75,7 @@ resources:
     cluster_ca: # ...
     token: # ...
     namespace: # ...
+    release_name: # ...
 
 - name: git-resource
   type: git
@@ -78,8 +88,8 @@ jobs:
 
   - put: helm
     params:
-      release_name: demo
       chart_dir: repo/helm
+      # ...
 ```
 
 ## Credits

@@ -19,14 +19,15 @@ get_revision() {
 
 # Prepare
 namespace=$(jq -r '.source.namespace // ""' < "$payload")
+release_name=$(jq -r '.source.release_name // ""' < "$payload")
 error_if_empty namespace
+error_if_empty release_name
 
 setup_resource "$payload"
 
 # Parse parameters
 req_params=(
   "chart_dir"
-  "release_name"
 )
 opt_params=(
   "dry_run"
@@ -100,11 +101,9 @@ get_revision "$release_name" || die "Getting revision"
 
 # Payload
 jq -n \
---arg release_name "$release_name" \
 --arg revision "$revision" \
 '{
   "version": {
-    "release": $release_name,
     "revision": $revision
   }
 }' >&3
