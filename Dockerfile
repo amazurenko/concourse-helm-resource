@@ -5,7 +5,6 @@ RUN set -e \
          ca-certificates \
          curl \
          tar \
-         git \
          jq \
          bash \
         ' \
