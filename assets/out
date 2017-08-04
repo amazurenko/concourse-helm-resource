@@ -21,7 +21,7 @@ get_revision() {
 namespace=$(jq -r '.source.namespace // ""' < "$payload")
 error_if_empty namespace
 
-setup_resource "$payload" "$source"
+setup_resource "$payload"
 
 # Parse parameters
 req_params=(
@@ -86,7 +86,7 @@ set_values=$(jq -r 'if .params.set_values then true else false end' < "$payload"
 if $set_values; then
   for key in $(jq -r '.params.set_values | keys[]' < "$payload"); do
     value=$(jq -r '.params.set_values.'$key' // ""' < "$payload")
-    helm_args+=(--set $key=${value:-''})
+    helm_args+=(--set $key=\'$value\')
 
     values_line+="'$key' "
   done
@@ -94,17 +94,17 @@ if $set_values; then
   printf "Values set: %s\n" "$values_line"
 fi
 
-helm upgrade --install --tiller-namespace="$namespace" ${helm_args[*]:-} $release_name $chart
+helm upgrade --install --tiller-namespace="$namespace" ${helm_args[@]:-} $release_name $chart
 
 get_revision "$release_name" || die "Getting revision"
 
 # Payload
 jq -n \
+--arg release_name "$release_name" \
 --arg revision "$revision" \
---arg chart_dir "$chart_dir" \
 '{
   "version": {
+    "release": $release_name,
     "revision": $revision
-  },
-  "metadata": []
+  }
 }' >&3
