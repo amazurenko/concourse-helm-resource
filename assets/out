@@ -87,7 +87,7 @@ set_values=$(jq -r 'if .params.set_values then true else false end' < "$payload"
 if $set_values; then
   for key in $(jq -r '.params.set_values | keys[]' < "$payload"); do
     value=$(jq -r '.params.set_values.'$key' // ""' < "$payload")
-    helm_args+=(--set $key=\'$value\')
+    helm_args+=(--set $key=$value)
 
     values_line+="'$key' "
   done
